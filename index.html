@@ -10,7 +10,7 @@
       font-family: Arial, sans-serif;
       background-color: #f4f4f4;
       margin: 0;
-      padding: 2rem;
+      padding: 1rem;
       transition: background-color 0.3s, color 0.3s;
     }
 
@@ -21,10 +21,12 @@
 
     .container {
       max-width: 600px;
+      width: 100%;
       margin: auto;
       background: white;
       padding: 2rem;
       border-radius: 8px;
+      box-sizing: border-box;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
 
@@ -36,9 +38,18 @@
       text-align: center;
     }
 
-    input[type="file"] {
+    input[type="file"],
+    select {
       display: block;
       margin: 1rem auto;
+    }
+
+    #preview {
+      display: block;
+      max-width: 100%;
+      margin: 1rem auto;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
 
     textarea {
@@ -70,11 +81,6 @@
       color: white;
     }
 
-    .btn-warning {
-      background-color: #f44336;
-      color: white;
-    }
-
     .btn-outline {
       background: transparent;
       border: 1px solid currentColor;
@@ -93,8 +99,16 @@
 <body>
   <div class="container">
     <h2>🖼️ Image to Text (OCR)</h2>
-    <input type="file" id="imageUpload" accept="image/*" />
-    <button class="btn-primary" onclick="extractText()">Extract Text</button>
+    <input type="file" id="imageUpload" accept="image/*" onchange="showPreview()" />
+    <img id="preview" src="" alt="Image Preview" style="display:none;"/>
+    <select id="langSelect">
+      <option value="eng" selected>English</option>
+      <option value="spa">Spanish</option>
+      <option value="fra">French</option>
+      <option value="deu">German</option>
+      <!-- Add more languages if needed -->
+    </select>
+    <button id="extractBtn" class="btn-primary" onclick="extractText()">Extract Text</button>
     <button class="btn-secondary" onclick="copyText()">Copy</button>
     <button class="btn-secondary" onclick="saveText()">Save as .txt</button>
     <button class="btn-outline" onclick="toggleTheme()">🌙 Toggle Theme</button>
@@ -110,16 +124,35 @@
       isDark = !isDark;
     }
 
+    function showPreview() {
+      const fileInput = document.getElementById('imageUpload');
+      const preview = document.getElementById('preview');
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
     function extractText() {
       const fileInput = document.getElementById('imageUpload');
       const output = document.getElementById('outputText');
       const status = document.getElementById('status');
+      const extractBtn = document.getElementById('extractBtn');
+      const lang = document.getElementById('langSelect').value;
 
       if (!fileInput.files.length) {
         alert("Please upload an image first.");
         return;
       }
 
+      extractBtn.disabled = true;
       status.innerText = "Processing image...";
       output.value = "";
 
@@ -127,7 +160,7 @@
       const reader = new FileReader();
 
       reader.onload = function () {
-        Tesseract.recognize(reader.result, 'eng', {
+        Tesseract.recognize(reader.result, lang, {
           logger: m => {
             if (m.status === "recognizing text") {
               status.innerText = `Progress: ${Math.round(m.progress * 100)}%`;
@@ -141,6 +174,9 @@
         .catch(err => {
           console.error(err);
           status.innerText = "Error occurred during OCR.";
+        })
+        .finally(() => {
+          extractBtn.disabled = false;
         });
       };
 
@@ -149,9 +185,9 @@
 
     function copyText() {
       const output = document.getElementById('outputText');
-      output.select();
-      document.execCommand("copy");
-      alert("Text copied to clipboard!");
+      navigator.clipboard.writeText(output.value)
+        .then(() => alert("Text copied to clipboard!"))
+        .catch(err => console.error('Failed to copy:', err));
     }
 
     function saveText() {
