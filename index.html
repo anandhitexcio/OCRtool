@@ -161,6 +161,7 @@
 
       reader.onload = function () {
         Tesseract.recognize(reader.result, lang, {
+          langPath: 'https://tessdata.projectnaptha.com/5', // ✅ Correct langPath
           logger: m => {
             if (m.status === "recognizing text") {
               status.innerText = `Progress: ${Math.round(m.progress * 100)}%`;
